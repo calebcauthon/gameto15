@@ -1,0 +1,107 @@
+:css
+  button.score { }
+%ul.log
+%h4 games:
+%ul.links
+%h3.game.name
+%br
+%button.our.score 0
+%button.their.score 0
+%table.stats
+  %thead
+    %th name
+    %th points
+    %th touches
+    %th
+      scores
+      %br>/
+      thrown
+    %th
+      scores
+      %br>/
+      caught
+    %th d's
+    %th turnovers
+  %tbody
+    
+:javascript
+  $(document).ready(function() {
+    
+    var firebase_games = new Firebase(firebase_url + 'game_logs');
+    firebase_games.on('child_added', function(snapshot) {
+      var name = snapshot.name();
+      var value = snapshot.val();
+      
+      $('.links').append('<li><a href="/game-stats?game_id='+name+'">'+name.replace(/_/g, ' ')+'</a></li>');
+    });
+    
+    
+
+    
+    var game_id = get_url_parameter('game_id');
+    if(game_id == 'null')
+      return;
+      
+    $('.game.name').html(game_id.replace(/_/g, ' '));
+    
+    var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id + '/score');
+    firebase_standings.on('value', function(snapshot) {
+      var data = snapshot.val();
+      console.log(snapshot, data);
+      var ad_astra_score = data["ad astra score"];
+      var other_score = data["other score"];
+      
+      $('.our.score').html(ad_astra_score);
+      $('.their.score').html(other_score);
+    });
+    
+    var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id);
+    firebase_standings.on('child_added', function(snapshot) {
+        
+      var name = snapshot.name();
+      if(name == 'logs' || name == 'score') return;
+      
+      var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id + '/' + name);
+      firebase_standings.on('value', function(snapshot) {
+        var player_data = snapshot.val();
+        var player_name = snapshot.name();
+        
+        
+        $('.' + player_name).find('td').eq(1).html(player_data['is in the game']);
+        $('.' + player_name).find('td').eq(2).html(player_data['has the disc']);
+        $('.' + player_name).find('td').eq(3).html(player_data['threw a score']);    
+        $('.' + player_name).find('td').eq(4).html(player_data['caught a score']);              
+        $('.' + player_name).find('td').eq(5).html(player_data['got a d']);    
+        var drops = parseInt(player_data['dropped the disc'], 10) || 0;
+        var turfs = parseInt(player_data['threw a turnover'], 10) || 0;        
+        $('.' + player_name).find('td').eq(6).html();                
+      });
+      
+      var data = snapshot.val();
+      var points_played = data['is in the game'] || 0;
+      var touches = data['has the disc'] || 0;
+      var scores_thrown = data['threw a score'] || 0;
+      var scores_caught = data['caught a score'] || 0;
+      var deez = data['got a d'] || 0; 
+      var drops = parseInt(data['dropped the disc'] || 0, 10);
+      var turfs = parseInt(data['threw a turnover'] || 0, 10);
+      var turnovers = drops + turfs;
+      
+      console.log('name:', snapshot.name(), snapshot.val());
+      
+        row = '<td>'+name+'</td><td>'+points_played+'</td><td>'+touches+'</td><td>'+scores_thrown+'</td>';
+        row += '<td>'+scores_caught+'</td>';
+        row += '<td>'+deez+'</td>'; 
+        row += '<td>'+turnovers+'</td>';                
+        $('table.stats').append('<tr class="'+name+'">' + row + '</tr>');
+        
+      
+        
+    });
+  });
+  
+  var get_url_parameter = function(name) {
+    return decodeURI(
+      (RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]
+    );
+  };

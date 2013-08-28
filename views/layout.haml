@@ -1,0 +1,38 @@
+!!!
+%html{:lang => "en"}
+  %head
+    %title Ad Astra Stats
+    %meta{:charset => "utf-8"}/
+    %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
+    %meta{:content => "", :name => "description"}/
+    %meta{:content => "", :name => "author"}/
+    :javascript
+      var firebase_url = "https://lusl-dev.firebaseio.com/";
+    
+    %script{:src => "js/jquery-1.9.1.js"}
+    %script{:src => "http://html5shim.googlecode.com/svn/trunk/html5.js"}
+    %script{:src => "https://cdn.firebase.com/v0/firebase.js", :type => "text/javascript"}
+    %script{:src => "https://cdn.firebase.com/v0/firebase-auth-client.js", :type => "text/javascript"}
+    %script{:src => "/js/dialog.js"}
+    %script{:src => "/js/lib.js"}
+    %link{:href => "/css/metro.css", :rel => "stylesheet", :type => "text/css"}/
+    %link{:href => "/css/style.css", :rel => "stylesheet", :type => "text/css"}/
+    %link{:href => "img/apple-touch-icon.png", :rel => "apple-touch-icon"}/
+    %link{:href => "img/apple-touch-icon-72x72.png", :rel => "apple-touch-icon", :sizes => "72x72"}/
+    %link{:href => "img/apple-touch-icon-114x114.png", :rel => "apple-touch-icon", :sizes => "114x114"}/
+    :css
+      .metrouicss .hero-unit { background: white; }
+      %body.metrouicss
+    .navbar
+      .navbar-inner
+        .container
+          %a.btn.btn-navbar
+            %span.icon-bar
+            %span.icon-bar
+            %span.icon-bar
+          .nav-collapse
+            %ul.nav
+              %li  
+    .container
+      = yield
+  %body.metrouicss

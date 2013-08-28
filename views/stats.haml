@@ -1,0 +1,316 @@
+%h4 games
+%ul.links
+
+:css
+  body .container { min-width: 900px; }
+  .metrouicss button, .metrouicss .button { min-width: 45px; }
+  .in.the.game { background: navy; color: white; }
+  .reversal.enabled { background: orange; color: black; }
+
+game:
+%input.game{:value => ""}
+%br
+%a.stats.link
+%br
+%br
+score:
+%button.our.score 0
+%button.their.score 0
+%br
+%br
+%button.show.all{:style => "display: none;"} show all
+%button.show.seven show 7 on the line
+%button.clear.the.line new 7
+%button.reversal undo
+%button.girls girls
+%button.guys guys
+%button.all all
+
+%table
+  - @person = Array.new
+  - aj = {:name => "AJ", :gender => "guy"}
+  - beau = {:name => "Beau", :gender => "guy"}
+  - billy = {:name => "Billy", :gender => "guy"}
+  - camo = {:name => "Camo", :gender => "guy"}
+  - dan = {:name => "Dan", :gender => "guy"}
+  - monty = {:name => "Monty", :gender => "guy"}
+  - muppet = {:name => "Muppet", :gender => "guy"}
+  - nate = {:name => "Nate", :gender => "guy"}
+  - nick = {:name => "Nick", :gender => "guy"}
+  - ryan = {:name => "Ryan", :gender => "guy"}
+  - taylor = {:name => "Taylor", :gender => "guy"}
+  - trent = {:name => "Trent", :gender => "guy"}
+  - wickman = {:name => "Wickman", :gender => "guy"}
+  - wint = {:name => "Wint", :gender => "guy"}
+  
+  - amanda = {:name => "Amanda", :gender => "girl"}
+  - baker = {:name => "Baker", :gender => "girl"}
+  - brit = {:name => "Brit", :gender => "girl"}
+  - clare = {:name => "Clare", :gender => "girl"}
+  - esh = {:name => "Esh", :gender => "girl"}
+  - fitz = {:name => "Fitz", :gender => "girl"}
+  - jess = {:name => "Jess", :gender => "girl"}
+  - kat = {:name => "Kat", :gender => "girl"}
+  - kelly = {:name => "Kelly", :gender => "girl"}
+  - nadine = {:name => "Nadine", :gender => "girl"}
+  - steph = {:name => "Steph", :gender => "girl"}
+  
+  - @person.push aj
+  - @person.push beau
+  - @person.push billy
+  - @person.push camo
+  - @person.push dan
+  - @person.push monty
+  - @person.push muppet
+  - @person.push nate
+  - @person.push nick
+  - @person.push ryan
+  - @person.push taylor
+  - @person.push trent
+  - @person.push wickman
+  - @person.push wint
+
+  - @person.push amanda
+  - @person.push baker
+  - @person.push brit      
+  - @person.push clare
+  - @person.push esh
+  - @person.push fitz
+  - @person.push jess   
+  - @person.push kat      
+  - @person.push kelly
+  - @person.push nadine
+  - @person.push steph
+
+  - @person.each do |person|
+    - name = person[:name]
+    - gender = person[:gender]
+    
+    %tr
+      %td{:class => "person #{name} #{gender}"}
+        %button{:label => name, :name => "is in the game"}= name
+        %button{:label => "touch", :name => "has the disc"} touch
+        %button{:label => "drop", :name => "dropped the disc"} drop
+        %button{:label => "turf", :name => "threw a turnover"} turf
+        %button{:label => "D!!!", :name => "got a d"} D!!!
+        %button{:label => "assist", :name => "threw a score"} assist
+        %button{:label => "score", :name => "caught a score"} score
+  
+    
+:javascript
+  var reversals_are_on = false;
+  var get_url_parameter = function(name) {
+    return decodeURI(
+      (RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]
+    );
+  };
+
+
+  $(document).ready(function() {
+    var firebase_games = new Firebase(firebase_url + 'game_logs');
+    firebase_games.on('child_added', function(snapshot) {
+      var name = snapshot.name();
+      var value = snapshot.val();
+      
+      $('.links').append('<li><a href="/stats?game_id='+name+'">'+name.replace(/_/g, ' ')+'</a></li>');
+    });
+    
+    
+    $('button.girls').click(function() {
+      $('.person').show();
+      $('.person.guy').hide();
+    });
+    $('button.guys').click(function() {
+      $('.person').show();
+      $('.person.girl').hide();
+    });
+        
+    var game_id = get_url_parameter('game_id');
+    var link = "/game-stats?game_id=" + game_id;
+      
+    if(game_id != 'null') {
+      $('a.stats.link').attr('href', link).html('stats link');
+      $('input.game').val(game_id.replace(/_/g, ' '));
+      $('.game.name').html(game_id.replace(/_/g, ' '));
+      
+      var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id + '/score');
+      firebase_standings.on('value', function(snapshot) {
+        var data = snapshot.val();
+        console.log(snapshot, data);
+        var ad_astra_score = data["ad astra score"];
+        var other_score = data["other score"];
+        
+        $('.our.score').html(ad_astra_score);
+        $('.their.score').html(other_score);
+      });
+      
+      var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id);
+      firebase_standings.on('child_added', function(snapshot) {
+          
+        var name = snapshot.name();
+        if(name == 'logs' || name == 'score') return;
+        
+        var firebase_standings = new Firebase(firebase_url + 'game_logs/' + game_id + '/' + name);
+        firebase_standings.on('value', function(snapshot) {
+          
+          var player_data = snapshot.val();
+          var player_name = snapshot.name();
+          
+          
+          $('.person.' + player_name).find('button').eq(0).data('count', player_data['is in the game']).html(player_name + ' - '+(player_data['is in the game'] || 0));
+          $('.person.' + player_name).find('button').eq(1).data('count', player_data['has the disc']).html('touches' + ' - '+(player_data['has the disc'] || 0));
+          $('.person.' + player_name).find('button').eq(5).data('count', player_data['threw a score']).html('assist' + ' - '+(player_data['threw a score'] || 0));
+          $('.person.' + player_name).find('button').eq(6).data('count', player_data['caught a score']).html('score' + ' - '+(player_data['caught a score'] || 0));              
+          $('.person.' + player_name).find('button').eq(4).data('count', player_data['got a d']).html('D!!!' + ' - '+(player_data['got a d'] || 0));    
+          var drops = parseInt(player_data['dropped the disc'], 10) || 0;
+          var turfs = parseInt(player_data['threw a turnover'], 10) || 0;        
+          $('.person.' + player_name).find('button').eq(2).data('count', drops).html('drop' + ' - '+drops);               
+          $('.person.' + player_name).find('button').eq(3).data('count', turfs).html('turf' + ' - '+turfs);                       
+          
+        });
+      });
+    }
+    
+    var toggle_reversals = function() {
+      reversals_are_on = !reversals_are_on;      
+      $('button.reversal').toggleClass('enabled');
+    };
+    
+    $('input.game').change(function() {
+      var game_id = $('.game').val().replace(/\ /g, '_');
+      var link = "http://lusl-dev.herokuapp.com/game-stats?game_id=" + game_id;
+      
+      $('a.stats.link').attr('href', link).html('stats link');
+    });
+    
+    $('button.reversal').click(function() {
+      toggle_reversals();
+    });
+    $('button.clear.the.line').click(function() {
+      $('.in.the.game').removeClass('in the game');
+    });
+    $('button.show.all').click(function() {
+      $(this).hide();
+      $('button.show.seven').show();
+      
+      $('.person').show();
+    });
+    $('button.show.seven').click(function() {
+      $(this).hide();
+      $('button.show.all').show();
+      
+      $('.person').each(function() {        
+        var first_button = $(this).find('button:first');
+        if($(first_button).hasClass('in the game')) 
+          $(this).show();
+        else
+          $(this).hide();
+      });
+    });
+    
+    
+    $('button.score').click(function() {
+      var current_score = parseInt($(this).text(), 10);
+      current_score++;
+      
+      if(current_score == 21)
+        current_score = 0;
+        
+      $(this).html(current_score);
+
+      var game_id = $('.game').val().replace(/\ /g, '_');            
+      var timestamp = new Date().getTime();
+            
+      if($(this).hasClass('our score')) {
+        $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=ad astra scored!&location=' + game_id, function(result) {
+          console.log(result);
+        });
+        $.get('/log-action?' + 'ad astra score' + '=' + current_score + '&location=' + game_id + '/score', function(result) {
+          console.log(result);
+        });
+      } else {
+        $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=the other team scored&location=' + game_id, function(result) {
+          console.log(result);
+        });
+        $.get('/log-action?' + 'other score' + '=' + current_score + '&location=' + game_id + '/score', function(result) {
+          console.log(result);
+        });
+
+      }
+    });
+    
+    $('.person').each(function() {
+      var player_name = $(this).find('button:first').text();
+      
+      
+      $(this).find('button:first').click(function() {
+        $(this).addClass('in the game');
+      });
+      
+      $(this).find('button').each(function() {
+        var next_click_is_undo = false;
+        var last_timeout;
+          
+
+        $(this).click(function() {
+          
+          return function() {
+            var game_id = $('.game').val();
+            game_id = game_id.replace(/\ /g,"_");
+          
+            var count = parseInt($(this).data('count'), 10) || 0;
+            var label = $(this).attr('label');
+            var name = $(this).attr('name');
+            if(next_click_is_undo || reversals_are_on) {
+              $(this).removeClass('in the game');
+              count--;
+              
+              if(count < 0)
+                count = 0;
+            } else
+              count++;
+                    
+            $(this).data('count', count);
+            $(this).html(label + ' - ' + count);
+            
+            $.get('/log-action?' + name + '=' + count + '&location=' + game_id + '/' + player_name, function(result) {
+              console.log(result);
+            });
+            
+            var timestamp = new Date().getTime();
+            $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=' + player_name + ' ' + name + '&location=' + game_id, function(result) {
+              console.log(result);
+            });
+
+            last_action = player_name + ' ' + name;
+
+            if(next_click_is_undo || reversals_are_on) {
+              $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=scratch that, ' + player_name + ' did not ' + name + '&location=' + game_id, function(result) {
+                console.log(result);
+              });
+              clearTimeout(last_timeout);
+              $(this).css({ 'background' : '', 'color' : '' });
+                next_click_is_undo = false;
+                
+              if(reversals_are_on) 
+                toggle_reversals();                              
+            } else {
+              next_click_is_undo = true;
+              $(this).css({ 'background' : 'orange', 'color' : 'white' });
+              var button = $(this);
+              last_timeout = setTimeout(function() {
+                $(button).css({ 'background' : '', 'color' : '' });
+                next_click_is_undo = false;
+              }, 2200);
+            }
+            
+            
+          };                        
+        }());
+      });
+    });
+        
+       
+    
+    
+  })
