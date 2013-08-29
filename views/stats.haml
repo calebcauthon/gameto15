@@ -55,32 +55,8 @@ score:
   - nadine = {:name => "Nadine", :gender => "girl"}
   - steph = {:name => "Steph", :gender => "girl"}
   
-  - @person.push aj
-  - @person.push beau
-  - @person.push billy
-  - @person.push camo
-  - @person.push dan
-  - @person.push monty
-  - @person.push muppet
-  - @person.push nate
-  - @person.push nick
-  - @person.push ryan
-  - @person.push taylor
-  - @person.push trent
-  - @person.push wickman
-  - @person.push wint
-
-  - @person.push amanda
-  - @person.push baker
-  - @person.push brit      
-  - @person.push clare
-  - @person.push esh
-  - @person.push fitz
-  - @person.push jess   
-  - @person.push kat      
-  - @person.push kelly
-  - @person.push nadine
-  - @person.push steph
+  %tr.player_row  
+    %td &nbsp;
 
   - @person.each do |person|
     - name = person[:name]
@@ -111,13 +87,28 @@ score:
 
 
   $(document).ready(function() {
+    var add_player = function(player_name) {
+    
+      if($('.person.'+player_name).length > 0)
+        return;
+        
+      var new_row = '<tr class="player_row">';
+      new_row += '<td class="person '+player_name+'"><button label="'+player_name+'" name="is in the game">'+player_name+'</button>';
+      new_row += '<button label="touch" name="has the disc">touch</button>';
+      new_row += '<button label="drop" name="dropped the disc">drop</button>';
+      new_row += '<button label="turf" name="threw a turnover">turf</button>';
+      new_row += '<button label="D!!!" name="got a d">D!!!</button>';
+      new_row += '<button label="assist" name="threw a score">assist</button>';
+      new_row += '<button label="score" name="caught a score">score</button></td>';                                  
+      
+      $('table.players .player_row:last').after(new_row);
+      
+      bind_row($('table.players .player_row:last'), player_name);
+    };
     $('.add.player').click(function() {
       var player_name = $('input.player').val();
+      add_player(player_name);
       
-      var new_row = '<tr>';
-      new_row += '<td><button label="'+player_name+'" name="is in the game">'+player_name+'</button></td>';
-
-      $('table.players .player_row:last').after(new_row);
     });
     
     var firebase_games = new Firebase(firebase_url + 'game_logs');
@@ -169,6 +160,7 @@ score:
           var player_data = snapshot.val();
           var player_name = snapshot.name();
           
+          add_player(player_name);
           
           $('.person.' + player_name).find('button').eq(0).data('count', player_data['is in the game']).html(player_name + ' - '+(player_data['is in the game'] || 0));
           $('.person.' + player_name).find('button').eq(1).data('count', player_data['has the disc']).html('touches' + ' - '+(player_data['has the disc'] || 0));
@@ -252,78 +244,79 @@ score:
       }
     });
     
-    $('.person').each(function() {
-      var player_name = $(this).find('button:first').text();
+    
+    var click_button = function(button, player_name) {
+      var next_click_is_undo = false;
+      var last_timeout;
+        
+      $(button).click(function() {
+        
+        return function() {
+          console.log('click');
+          var game_id = $('.game').val();
+          game_id = game_id.replace(/\ /g,"_");
+        
+          var count = parseInt($(this).data('count'), 10) || 0;
+          var label = $(this).attr('label');
+          var name = $(this).attr('name');
+          if(next_click_is_undo || reversals_are_on) {
+            $(this).removeClass('in the game');
+            count--;
+            
+            if(count < 0)
+              count = 0;
+          } else
+            count++;
+                  
+          $(this).data('count', count);
+          $(this).html(label + ' - ' + count);
+          
+          $.get('/log-action?' + name + '=' + count + '&location=' + game_id + '/' + player_name, function(result) {
+            console.log(result);
+          });
+          
+          var timestamp = new Date().getTime();
+          $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=' + player_name + ' ' + name + '&location=' + game_id, function(result) {
+            console.log(result);
+          });
       
+          last_action = player_name + ' ' + name;
       
-      $(this).find('button:first').click(function() {
+          if(next_click_is_undo || reversals_are_on) {
+            $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=scratch that, ' + player_name + ' did not ' + name + '&location=' + game_id, function(result) {
+              console.log(result);
+            });
+            clearTimeout(last_timeout);
+            $(this).css({ 'background' : '', 'color' : '' });
+              next_click_is_undo = false;
+              
+            if(reversals_are_on) 
+              toggle_reversals();                              
+          } else {
+            next_click_is_undo = true;
+            $(this).css({ 'background' : 'orange', 'color' : 'white' });
+            var button = $(this);
+            last_timeout = setTimeout(function() {
+              $(button).css({ 'background' : '', 'color' : '' });
+              next_click_is_undo = false;
+            }, 2200);
+          }                            
+        };                        
+      }()); 
+    }
+    
+    var bind_row = function(row, player_name) {
+      $(row).find('button:first').click(function() {
         $(this).addClass('in the game');
       });
-      
-      $(this).find('button').each(function() {
-        var next_click_is_undo = false;
-        var last_timeout;
-          
-
-        $(this).click(function() {
-          
-          return function() {
-            var game_id = $('.game').val();
-            game_id = game_id.replace(/\ /g,"_");
-          
-            var count = parseInt($(this).data('count'), 10) || 0;
-            var label = $(this).attr('label');
-            var name = $(this).attr('name');
-            if(next_click_is_undo || reversals_are_on) {
-              $(this).removeClass('in the game');
-              count--;
-              
-              if(count < 0)
-                count = 0;
-            } else
-              count++;
-                    
-            $(this).data('count', count);
-            $(this).html(label + ' - ' + count);
-            
-            $.get('/log-action?' + name + '=' + count + '&location=' + game_id + '/' + player_name, function(result) {
-              console.log(result);
-            });
-            
-            var timestamp = new Date().getTime();
-            $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=' + player_name + ' ' + name + '&location=' + game_id, function(result) {
-              console.log(result);
-            });
-
-            last_action = player_name + ' ' + name;
-
-            if(next_click_is_undo || reversals_are_on) {
-              $.get('/log-action?timestamp=' + timestamp + '&log=true&what_happened=scratch that, ' + player_name + ' did not ' + name + '&location=' + game_id, function(result) {
-                console.log(result);
-              });
-              clearTimeout(last_timeout);
-              $(this).css({ 'background' : '', 'color' : '' });
-                next_click_is_undo = false;
-                
-              if(reversals_are_on) 
-                toggle_reversals();                              
-            } else {
-              next_click_is_undo = true;
-              $(this).css({ 'background' : 'orange', 'color' : 'white' });
-              var button = $(this);
-              last_timeout = setTimeout(function() {
-                $(button).css({ 'background' : '', 'color' : '' });
-                next_click_is_undo = false;
-              }, 2200);
-            }
-            
-            
-          };                        
-        }());
-      });
+      $(row).find('button').each(function() {
+        click_button(this, player_name); 
+      });      
+    };
+    
+    $('.person').each(function() {
+      var player_name = $(this).find('button:first').text();            
+      bind_row(this, player_name);
     });
-        
-       
-    
-    
-  })
+  });
+  
