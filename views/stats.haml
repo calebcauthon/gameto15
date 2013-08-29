@@ -26,7 +26,7 @@ score:
 %button.guys guys
 %button.all all
 
-%table
+%table.players
   - @person = Array.new
   - aj = {:name => "AJ", :gender => "guy"}
   - beau = {:name => "Beau", :gender => "guy"}
@@ -86,7 +86,7 @@ score:
     - name = person[:name]
     - gender = person[:gender]
     
-    %tr
+    %tr.player_row
       %td{:class => "person #{name} #{gender}"}
         %button{:label => name, :name => "is in the game"}= name
         %button{:label => "touch", :name => "has the disc"} touch
@@ -96,7 +96,11 @@ score:
         %button{:label => "assist", :name => "threw a score"} assist
         %button{:label => "score", :name => "caught a score"} score
   
-    
+  
+  %tr
+    %td{:class => "person"}
+      %input.player
+      %button.add.player add  
 :javascript
   var reversals_are_on = false;
   var get_url_parameter = function(name) {
@@ -107,6 +111,15 @@ score:
 
 
   $(document).ready(function() {
+    $('.add.player').click(function() {
+      var player_name = $('input.player').val();
+      
+      var new_row = '<tr>';
+      new_row += '<td><button label="'+player_name+'" name="is in the game">'+player_name+'</button></td>';
+
+      $('table.players .player_row:last').after(new_row);
+    });
+    
     var firebase_games = new Firebase(firebase_url + 'game_logs');
     firebase_games.on('child_added', function(snapshot) {
       var name = snapshot.name();
